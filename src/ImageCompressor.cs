@@ -131,7 +131,7 @@ class ImageCompressor
 
     private void CompressByThreshold((long x, long y) regionStart, (long x, long y) regionEnd)
     {
-        if (regionStart.x >= regionEnd.x || regionStart.y >= regionEnd.y) return;
+        if (regionStart.x > regionEnd.x || regionStart.y > regionEnd.y) return;
 
         long regionWidth = regionEnd.x - regionStart.x + 1;
         long regionHeight = regionEnd.y - regionStart.y + 1;
