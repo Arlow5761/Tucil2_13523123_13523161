@@ -8,7 +8,82 @@ class ImageCompressor
 {
     static void Main(string[] args)
     {
-        Console.WriteLine("Hello, World!");
+        ImageCompressor compressor = new ImageCompressor();
+
+        Console.WriteLine("Image Compressor v1.0");
+
+        do
+        {
+            Console.Write("Enter an absolute image path: ");
+            compressor.imagePath = Console.ReadLine() ?? "";
+        }
+        while (!File.Exists(compressor.imagePath));
+
+        do
+        {
+            bool validSelection = false;
+
+            Console.WriteLine("Choose an error calculation method.");
+            Console.WriteLine("Possible values are:");
+            
+            for (int i = 0; i < availableErrorCalculators.Length; i++)
+            {
+                Console.WriteLine("> " + availableErrorCalculators[i].Name);
+            }
+
+            string selection = Console.ReadLine() ?? "";
+
+            for (int i = 0; i < availableErrorCalculators.Length; i++)
+            {
+                if (selection == availableErrorCalculators[i].Name)
+                {
+                    validSelection = true;
+                    break;
+                }
+            }
+
+            if (validSelection) break;
+        }
+        while (true);
+
+        do
+        {
+            Console.Write("Enter desired threshold: ");
+            
+            string rawInput = Console.ReadLine() ?? "";
+
+            if (!double.TryParse(rawInput, out compressor.threshold))
+            {
+                continue;
+            }
+
+            break;
+        }
+        while (true);
+
+        do
+        {
+            Console.Write("Enter minimum block size: ");
+
+            string rawInput = Console.ReadLine() ?? "";
+
+            if (!int.TryParse(rawInput, out compressor.minBlockSize))
+            {
+                continue;
+            }
+
+            break;
+        }
+        while (true);
+
+        do
+        {
+            Console.WriteLine("Enter an absolute output path (should have the same extension as input file):");
+            compressor.outPath = Console.ReadLine() ?? "";
+        }
+        while (compressor.outPath == "");
+
+        compressor.Run();
     }
 
     static ErrorCalculator[] availableErrorCalculators = {
@@ -42,7 +117,7 @@ class ImageCompressor
         originalSize = rawData.LongLength;
         rawImage = new Bitmap(imagePath);
         
-        if (compressionPercentage == 0.0d)
+        if (compressionPercentage <= 0.0d)
         {
             CompressByThreshold((0, 0), (rawImage.Size.Width - 1, rawImage.Size.Height - 1));
         }
@@ -56,6 +131,8 @@ class ImageCompressor
 
     private void CompressByThreshold((long x, long y) regionStart, (long x, long y) regionEnd)
     {
+        if (regionStart.x >= regionEnd.x || regionStart.y >= regionEnd.y) return;
+
         long regionWidth = regionEnd.x - regionStart.x + 1;
         long regionHeight = regionEnd.y - regionStart.y + 1;
         Color[,] pixels = new Color[regionWidth, regionHeight];
@@ -64,7 +141,7 @@ class ImageCompressor
         {
             for (long j = regionStart.y; j <= regionEnd.y; j++)
             {
-                pixels[i, j] = rawImage.GetPixel((int) i, (int) j);
+                pixels[i, j] = rawImage!.GetPixel((int) i, (int) j);
             }
         }
 
@@ -78,7 +155,7 @@ class ImageCompressor
             {
                 for (long j = regionStart.y; j <= regionEnd.y; j++)
                 {
-                    rawImage.SetPixel((int) i, (int) j, averagePixel);
+                    rawImage!.SetPixel((int) i, (int) j, averagePixel);
                 }
             }
         }
@@ -109,7 +186,7 @@ class ImageCompressor
         {
             for (long j = regionStart.y; j <= regionEnd.y; j++)
             {
-                Color pixel = rawImage.GetPixel((int) i, (int) j);
+                Color pixel = rawImage!.GetPixel((int) i, (int) j);
                 r += pixel.R;
                 g += pixel.G;
                 b += pixel.B;
