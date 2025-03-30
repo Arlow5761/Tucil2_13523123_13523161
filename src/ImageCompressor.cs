@@ -2,7 +2,9 @@
 
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Numerics;
 using ErrorCalculation;
+using Util;
 
 class ImageCompressor
 {
@@ -87,7 +89,7 @@ class ImageCompressor
     }
 
     static ErrorCalculator[] availableErrorCalculators = {
-
+        new MaxPixelDifferenceCalculator()
     };
 
     public string imagePath;
@@ -119,7 +121,7 @@ class ImageCompressor
         
         if (compressionPercentage <= 0.0d)
         {
-            CompressByThreshold((0, 0), (rawImage.Size.Width - 1, rawImage.Size.Height - 1));
+            CompressByThreshold(new Vector2Int(0, 0), new Vector2Int(rawImage.Size.Width - 1, rawImage.Size.Height - 1));
         }
         else
         {
@@ -129,42 +131,41 @@ class ImageCompressor
         rawImage.Save(outPath, ImageFormat.Png);
     }
 
-    private void CompressByThreshold((long x, long y) regionStart, (long x, long y) regionEnd)
+    private void CompressByThreshold(Vector2Int regionStart, Vector2Int regionEnd)
     {
-        if (regionStart.x > regionEnd.x || regionStart.y > regionEnd.y) return;
+        if (regionStart.x > regionEnd.x || regionStart.y > regionEnd.y || (regionStart.x == regionEnd.x && regionStart.y == regionEnd.y)) return;
 
-        long regionWidth = regionEnd.x - regionStart.x + 1;
-        long regionHeight = regionEnd.y - regionStart.y + 1;
-        Color[,] pixels = new Color[regionWidth, regionHeight];
+        Vector2Int regionSize = regionEnd - regionStart + new Vector2Int(1, 1);
+        Color[,] pixels = new Color[regionSize.x, regionSize.y];
 
-        for (long i = regionStart.x; i <= regionEnd.x; i++)
+        for (int i = 0; i < regionSize.x; i++)
         {
-            for (long j = regionStart.y; j <= regionEnd.y; j++)
+            for (int j = 0; j < regionSize.y; j++)
             {
-                pixels[i, j] = rawImage!.GetPixel((int) i, (int) j);
+                pixels[i, j] = rawImage!.GetPixel(regionStart.x + i, regionStart.y + j);
             }
         }
 
         double error = errorCalculator.CalculateError(pixels);
-
+        
         if (error < threshold)
         {
             Color averagePixel = GetAveragePixel(regionStart, regionEnd);
 
-            for (long i = regionStart.x; i <= regionEnd.x; i++)
+            for (int i = regionStart.x; i <= regionEnd.x; i++)
             {
-                for (long j = regionStart.y; j <= regionEnd.y; j++)
+                for (int j = regionStart.y; j <= regionEnd.y; j++)
                 {
-                    rawImage!.SetPixel((int) i, (int) j, averagePixel);
+                    rawImage!.SetPixel(i, j, averagePixel);
                 }
             }
         }
-        else if (regionWidth >= 2 * minBlockSize && regionHeight >= 2 * minBlockSize)
+        else if (regionSize.x >= 2 * minBlockSize && regionSize.y >= 2 * minBlockSize)
         {
-            CompressByThreshold(regionStart, (regionEnd.x / 2, regionEnd.y / 2));
-            CompressByThreshold((regionStart.x / 2 + 1, regionStart.y), (regionEnd.x, regionEnd.y / 2));
-            CompressByThreshold((regionStart.x, regionStart.y / 2 + 1), (regionEnd.x / 2, regionEnd.y));
-            CompressByThreshold((regionStart.x / 2 + 1, regionStart.y / 2 + 1), (regionEnd.x, regionEnd.y));
+            CompressByThreshold(regionStart, regionStart + regionSize / 2 - new Vector2Int(1, 1));
+            CompressByThreshold(regionStart + new Vector2Int(regionSize.x / 2, 0), regionStart + new Vector2Int(regionSize.x - 1, regionSize.y / 2));
+            CompressByThreshold(regionStart + new Vector2Int(0, regionSize.y / 2), regionStart + new Vector2Int(regionSize.x / 2, regionSize.y - 1));
+            CompressByThreshold(regionStart + regionSize / 2, regionEnd);
         }
     }
 
@@ -173,7 +174,7 @@ class ImageCompressor
 
     }
 
-    private Color GetAveragePixel((long x, long y) regionStart, (long x, long y) regionEnd)
+    private Color GetAveragePixel(Vector2Int regionStart, Vector2Int regionEnd)
     {
         long regionWidth = regionEnd.x - regionStart.x + 1;
         long regionHeight = regionEnd.y - regionStart.y + 1;
