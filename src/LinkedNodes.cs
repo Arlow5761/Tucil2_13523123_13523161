@@ -40,6 +40,27 @@ public class InvertedTree<T>
         }
     }
 
+    public void AddLeaves(Node<T>[] newLeafNodes, Node<T> targetLeafNode)
+    {
+        // make sure node is actually a leaf node
+        for (int i = 0; i < leafNodes.Count; i++)
+        {
+            Node<T> leafNode = leafNodes[i];
+
+            if (leafNode == targetLeafNode)
+            {
+                leafNodes.RemoveAt(i);
+                for (int j = 0; j < newLeafNodes.Length; j++)
+                {
+                    newLeafNodes[j].next = leafNode;
+                    leafNodes.Add(newLeafNodes[j]);
+                }
+                
+                return;
+            }
+        }
+    }
+
     public void RemoveLeaf(Node<T> leafNode)
     {
         // do not remove root node

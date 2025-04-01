@@ -1,18 +1,27 @@
 namespace ImageCompressor.ErrorCalculation;
 
 using System.Drawing;
+using Util;
 
 public abstract class ErrorCalculator
 {
+    protected Bitmap? image = null;
+
+    // This function should be overloaded when implementing a cache to reset the internal cache
+    public virtual void LoadImage(Bitmap image)
+    {
+        this.image = image;
+    }
+
     public abstract string Name { get; }
-    public abstract double CalculateError(Color[,] pixels);
+    public abstract double CalculateError(Region2Int region);
 }
 
 public class MaxPixelDifferenceCalculator : ErrorCalculator
 {
     public override string Name { get => "Max Pixel Difference"; }
 
-    public override double CalculateError(Color[,] pixels)
+    public override double CalculateError(Region2Int region)
     {
         uint minR = uint.MaxValue;
         uint minG = uint.MaxValue;
@@ -22,11 +31,11 @@ public class MaxPixelDifferenceCalculator : ErrorCalculator
         uint maxG = uint.MinValue;
         uint maxB = uint.MinValue;
 
-        for (int i = 0; i < pixels.GetLength(0); i++)
+        for (int i = region.start.x; i <= region.end.x; i++)
         {
-            for (int j = 0; j < pixels.GetLength(1); j++)
+            for (int j = region.start.y; j < region.end.y; j++)
             {
-                Color c = pixels[i, j];
+                Color c = image!.GetPixel(i, j);
 
                 if (c.R > maxR) maxR = c.R;
                 if (c.G > maxG) maxG = c.G;
