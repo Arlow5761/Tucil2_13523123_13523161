@@ -155,7 +155,7 @@ class ImageCompressor
         
         if (compressionPercentage <= 0.0d)
         {
-            CompressByThreshold(new Vector2Int(0, 0), new Vector2Int(rawImage.Size.Width - 1, rawImage.Size.Height - 1));
+            CompressByThreshold(new(new(0, 0), new(rawImage.Size.Width - 1, rawImage.Size.Height - 1)));
         }
         else
         {
@@ -165,33 +165,22 @@ class ImageCompressor
         rawImage.Save(outPath, ImageFormat.Png);
     }
 
-    private void CompressByThreshold(Vector2Int regionStart, Vector2Int regionEnd)
+    private void CompressByThreshold(Region2Int region)
     {
-        if (regionStart.x > regionEnd.x || regionStart.y > regionEnd.y || (regionStart.x == regionEnd.x && regionStart.y == regionEnd.y)) return;
+        if (region.area <= 1) return;
 
-        Vector2Int regionSize = regionEnd - regionStart + new Vector2Int(1, 1);
-        Color[,] pixels = new Color[regionSize.x, regionSize.y];
-
-        for (int i = 0; i < regionSize.x; i++)
-        {
-            for (int j = 0; j < regionSize.y; j++)
-            {
-                pixels[i, j] = rawImage!.GetPixel(regionStart.x + i, regionStart.y + j);
-            }
-        }
-
-        double error = errorCalculator.CalculateError(new Region2Int(regionStart, regionEnd));
+        double error = errorCalculator.CalculateError(region);
         
         if (error < threshold)
         {
-            NormalizeRegion(new(regionStart, regionEnd));
+            NormalizeRegion(region);
         }
-        else if (regionSize.x >= 2 * minBlockSize && regionSize.y >= 2 * minBlockSize)
+        else if (region.area >= 4 * minBlockSize && region.size.x > 1 && region.size.y > 1)
         {
-            CompressByThreshold(regionStart, regionStart + regionSize / 2 - new Vector2Int(1, 1));
-            CompressByThreshold(regionStart + new Vector2Int(regionSize.x / 2, 0), regionStart + new Vector2Int(regionSize.x - 1, regionSize.y / 2));
-            CompressByThreshold(regionStart + new Vector2Int(0, regionSize.y / 2), regionStart + new Vector2Int(regionSize.x / 2, regionSize.y - 1));
-            CompressByThreshold(regionStart + regionSize / 2, regionEnd);
+            CompressByThreshold(new(region.start, region.start + region.size / 2 - new Vector2Int(1, 1)));
+            CompressByThreshold(new(region.start + new Vector2Int(region.size.x / 2, 0), region.start + new Vector2Int(region.size.x - 1, region.size.y / 2 - 1)));
+            CompressByThreshold(new(region.start + new Vector2Int(0, region.size.y / 2), region.start + new Vector2Int(region.size.x / 2 - 1, region.size.y - 1)));
+            CompressByThreshold(new(region.start + region.size / 2, region.end));
         }
     }
 
@@ -205,15 +194,15 @@ class ImageCompressor
         {
             Region2Int currentRegion = tree.leafNodes[i].content.region;
 
-            if (currentRegion.size.x >= 2 * minBlockSize && currentRegion.size.y >= 2 * minBlockSize)
+            if (currentRegion.area >= 4 * minBlockSize && currentRegion.size.x > 1 && currentRegion.size.y > 1)
             {
                 tree.AddLeaves([
                     new(new(new(currentRegion.start, currentRegion.start + currentRegion.size / 2 - new Vector2Int(1, 1)))),
-                    new(new(new(currentRegion.start + new Vector2Int(currentRegion.size.x / 2, 0), currentRegion.start + new Vector2Int(currentRegion.size.x - 1, currentRegion.size.y / 2)))),
-                    new(new(new(currentRegion.start + new Vector2Int(0, currentRegion.size.y / 2), currentRegion.start + new Vector2Int(currentRegion.size.x / 2, currentRegion.size.y - 1)))),
+                    new(new(new(currentRegion.start + new Vector2Int(currentRegion.size.x / 2, 0), currentRegion.start + new Vector2Int(currentRegion.size.x - 1, currentRegion.size.y / 2 - 1)))),
+                    new(new(new(currentRegion.start + new Vector2Int(0, currentRegion.size.y / 2), currentRegion.start + new Vector2Int(currentRegion.size.x / 2 - 1, currentRegion.size.y - 1)))),
                     new(new(new(currentRegion.start + currentRegion.size / 2, currentRegion.end)))
                 ], tree.leafNodes[i]);
-
+                
                 continue;
             }
 
@@ -229,23 +218,31 @@ class ImageCompressor
 
         int pixelsInImage = rawImage.Width * rawImage.Height;
         int uncompressedPixels = pixelsInImage;
+        int targetSize = (int) (originalSize * compressionPercentage);
 
         MemoryStream imageStream = new((int) originalSize);
         rawImage.Save(imageStream, ImageFormat.Png);
 
-        while (imageStream.Length > originalSize * compressionPercentage)
+        while (imageStream.Length > targetSize)
         {
-            uncompressedPixels = (int) (imageStream.Length  * pixelsInImage / originalSize);
+            int targetUncompressedPixels = uncompressedPixels - (int) ((imageStream.Length - targetSize) * uncompressedPixels / imageStream.Length);
 
-            while (uncompressedPixels > pixelsInImage * compressionPercentage)
+            do
             {
-                imageStream.SetLength(0);
-
                 if (tree.leafNodes.Count <= 1) break;
 
-                uncompressedPixels -= tree.leafNodes[0].content.region.size.x * tree.leafNodes[0].content.region.size.y;
+                Region2Int region = tree.leafNodes[0].content.region;
+                
+                if (region.area < 4 * minBlockSize || region.size.x <= 1 || region.size.y <= 1)
+                {
+                    uncompressedPixels -= region.area - 1;
+                }
+                else
+                {
+                    uncompressedPixels -= 3;
+                }
 
-                NormalizeRegion(tree.leafNodes[0].content.region);
+                NormalizeRegion(region);
                 tree.RemoveLeaf(tree.leafNodes[0]);
 
                 Node<ImageRegion> lastLeaf = tree.leafNodes[tree.leafNodes.Count - 1];
@@ -256,9 +253,11 @@ class ImageCompressor
                     InsertLeafNode(lastLeaf, tree.leafNodes);
                 }
             }
+            while (uncompressedPixels > targetUncompressedPixels);
 
             if (tree.leafNodes.Count <= 1) break;
 
+            imageStream.SetLength(0);
             rawImage.Save(imageStream, ImageFormat.Png);
         }
     }

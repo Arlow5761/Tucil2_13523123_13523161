@@ -30,6 +30,8 @@ public struct Region2Int
     }
 
     public Vector2Int size { get => end - start + new Vector2Int(1, 1); }
+    public int area { get => size.x * size.y; }
+    public bool isValid { get => start.x <= end.x && start.y <= end.y; }
 }
 
 public struct ImageRegion
