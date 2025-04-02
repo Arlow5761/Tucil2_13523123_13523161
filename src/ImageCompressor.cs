@@ -119,7 +119,11 @@ class ImageCompressor
     }
 
     static ErrorCalculator[] availableErrorCalculators = {
-        new MaxPixelDifferenceCalculator()
+        new MaxPixelDifferenceCalculator(),
+        new VarianceCalculator(),
+        new MeanAbsoluteDeviationCalculator(),
+        new EntropyCalculator(),
+        //new SSIMCalculator()
     };
 
     public string imagePath;

@@ -94,7 +94,7 @@ public class VarianceCalculator : ErrorCalculator
             }
         }
 
-        // Compute average variance for each kolor canel
+        // Compute average variance for each color channel
         double varianceR = sqDiffR / count;
         double varianceG = sqDiffG / count;
         double varianceB = sqDiffB / count;
