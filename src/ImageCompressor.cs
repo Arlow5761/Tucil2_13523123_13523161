@@ -1,10 +1,13 @@
 ﻿namespace ImageCompressor;
 
-using System.Drawing;
-using System.Drawing.Imaging;
+using SixLabors.ImageSharp;
 using Tree;
 using ErrorCalculation;
 using Util;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Advanced;
+using SixLabors.ImageSharp.Formats;
 
 class ImageCompressor
 {
@@ -135,7 +138,9 @@ class ImageCompressor
 
     private byte[]? rawData = null;
     private long originalSize = 0;
-    private Bitmap? rawImage = null;
+    private Image<Rgb24>? sourceImage = null;
+    private Image<Rgb24>? outImage = null;
+    private IImageEncoder? encoder = null;
     private QuadTree? tree = null;
 
     public ImageCompressor()
@@ -152,20 +157,24 @@ class ImageCompressor
     {
         rawData = File.ReadAllBytes(imagePath);
         originalSize = rawData.LongLength;
-        rawImage = new Bitmap(imagePath);
 
-        errorCalculator.LoadImage((Bitmap) rawImage.Clone());
+        sourceImage = (Image<Rgb24>) Image.Load(imagePath);
+        outImage = (Image<Rgb24>) Image.Load(imagePath);
+
+        encoder = outImage.Configuration.ImageFormatsManager.GetEncoder(outImage.Metadata.DecodedImageFormat!);
+
+        errorCalculator.LoadImage(sourceImage);
         
         if (compressionPercentage <= 0.0d)
         {
-            CompressByThreshold(new(new(0, 0), new(rawImage.Size.Width - 1, rawImage.Size.Height - 1)));
+            CompressByThreshold(new(new(0, 0), new(sourceImage.Size.Width - 1, sourceImage.Size.Height - 1)));
         }
         else
         {
             CompressByPercentage();
         }
 
-        rawImage.Save(outPath, ImageFormat.Png);
+        outImage.Save(outPath, encoder);
     }
 
     private void CompressByThreshold(Region2Int region)
@@ -189,14 +198,14 @@ class ImageCompressor
 
     private void CompressByPercentage()
     {
-        tree = new QuadTree(rawImage!, minBlockSize, errorCalculator);
+        tree = new QuadTree(sourceImage!, minBlockSize, errorCalculator);
 
-        int pixelsInImage = rawImage!.Width * rawImage!.Height;
+        int pixelsInImage = sourceImage!.Width * sourceImage!.Height;
         int uncompressedPixels = pixelsInImage;
         int targetSize = (int) (originalSize * compressionPercentage);
 
         MemoryStream imageStream = new((int) originalSize);
-        rawImage.Save(imageStream, ImageFormat.Png);
+        outImage!.Save(imageStream, encoder!);
 
         while (imageStream.Length > targetSize)
         {
@@ -226,7 +235,7 @@ class ImageCompressor
             if (tree.leavesCount <= 1) break;
 
             imageStream.SetLength(0);
-            rawImage.Save(imageStream, ImageFormat.Png);
+            outImage.Save(imageStream, encoder!);
         }
     }
 
@@ -243,7 +252,7 @@ class ImageCompressor
         {
             for (int j = region.start.y; j <= region.end.y; j++)
             {
-                Color pixel = rawImage!.GetPixel(i, j);
+                Rgb24 pixel = sourceImage![i, j];
                 r += pixel.R;
                 g += pixel.G;
                 b += pixel.B;
@@ -260,7 +269,7 @@ class ImageCompressor
         {
             for (int j = region.start.y; j <= region.end.y; j++)
             {
-                rawImage!.SetPixel(i, j, Color.FromArgb(r, g, b));
+                outImage![i, j] = new Rgb24((byte) r, (byte) g, (byte) b);
             }
         }
     }

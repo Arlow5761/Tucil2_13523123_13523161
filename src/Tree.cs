@@ -1,14 +1,15 @@
 namespace ImageCompressor.Tree;
 
-using System.Drawing;
 using ErrorCalculation;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using Util;
 
 public class QuadTree
 {
     public int leavesCount { get => leafNodes.Count; }
 
-    public QuadTree(Bitmap source, int minBlockSize, ErrorCalculator errorCalculator)
+    public QuadTree(Image<Rgb24> source, int minBlockSize, ErrorCalculator errorCalculator)
     {
         this.sourceImage = source;
         this.errorCalculator = errorCalculator;
@@ -125,7 +126,7 @@ public class QuadTree
         return poppedNode.content;
     }
 
-    private Bitmap sourceImage;
+    private Image<Rgb24> sourceImage;
     private ErrorCalculator errorCalculator;
     private Node rootNode;
     private List<Node> leafNodes;

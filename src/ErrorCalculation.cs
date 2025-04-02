@@ -1,14 +1,15 @@
 namespace ImageCompressor.ErrorCalculation;
 
-using System.Drawing;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using Util;
 
 public abstract class ErrorCalculator
 {
-    protected Bitmap? image = null;
+    protected Image<Rgb24>? image = null;
 
     // This function should be overloaded when implementing a cache to reset the internal cache
-    public virtual void LoadImage(Bitmap image)
+    public virtual void LoadImage(Image<Rgb24> image)
     {
         this.image = image;
     }
@@ -35,7 +36,7 @@ public class MaxPixelDifferenceCalculator : ErrorCalculator
         {
             for (int j = region.start.y; j < region.end.y; j++)
             {
-                Color c = image!.GetPixel(i, j);
+                Rgb24 c = image![i, j];
 
                 if (c.R > maxR) maxR = c.R;
                 if (c.G > maxG) maxG = c.G;
@@ -67,7 +68,7 @@ public class VarianceCalculator : ErrorCalculator
         {
             for (int j = region.start.y; j <= region.end.y; j++)
             {
-                Color c = image!.GetPixel(i, j);
+                Rgb24 c = image![i, j];
                 sumR += c.R;
                 sumG += c.G;
                 sumB += c.B;
@@ -87,7 +88,7 @@ public class VarianceCalculator : ErrorCalculator
         {
             for (int j = region.start.y; j <= region.end.y; j++)
             {
-                Color c = image!.GetPixel(i, j);
+                Rgb24 c = image![i, j];
                 sqDiffR += Math.Pow(c.R - meanR, 2);
                 sqDiffG += Math.Pow(c.G - meanG, 2);
                 sqDiffB += Math.Pow(c.B - meanB, 2);
@@ -126,7 +127,7 @@ public class MeanAbsoluteDeviationCalculator : ErrorCalculator
         {
             for (int j = region.start.y; j <= region.end.y; j++)
             {
-                Color c = image.GetPixel(i, j);
+                Rgb24 c = image[i, j];
                 sumR += c.R;
                 sumG += c.G;
                 sumB += c.B;
@@ -145,7 +146,7 @@ public class MeanAbsoluteDeviationCalculator : ErrorCalculator
         {
             for (int j = region.start.y; j <= region.end.y; j++)
             {
-                Color c = image.GetPixel(i, j);
+                Rgb24 c = image[i, j];
                 absDiffR += Math.Abs(c.R - meanR);
                 absDiffG += Math.Abs(c.G - meanG);
                 absDiffB += Math.Abs(c.B - meanB);
@@ -184,7 +185,7 @@ public class EntropyCalculator : ErrorCalculator
         {
             for (int j = region.start.y; j <= region.end.y; j++)
             {
-                Color c = image.GetPixel(i, j);
+                Rgb24 c = image[i, j];
                 freqR[c.R]++;
                 freqG[c.G]++;
                 freqB[c.B]++;
@@ -246,7 +247,7 @@ public class SSIMCalculator : ErrorCalculator
         {
             for (int j = region.start.y; j <= region.end.y; j++)
             {
-                Color c = image.GetPixel(i, j);
+                Rgb24 c = image[i, j];
                 sumR += c.R;
                 sumG += c.G;
                 sumB += c.B;
@@ -265,7 +266,7 @@ public class SSIMCalculator : ErrorCalculator
         {
             for (int j = region.start.y; j <= region.end.y; j++)
             {
-                Color c = image.GetPixel(i, j);
+                Rgb24 c = image[i, j];
                 varR += Math.Pow(c.R - meanR, 2);
                 varG += Math.Pow(c.G - meanG, 2);
                 varB += Math.Pow(c.B - meanB, 2);
