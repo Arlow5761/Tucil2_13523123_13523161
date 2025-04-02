@@ -200,7 +200,6 @@ public class EntropyCalculator : ErrorCalculator
 
         double hRGB = (hR + hG + hB) / 3.0;
 
-        // 4. Normalize max entropy for 8-bit data => 8 bits
         double normalized = hRGB / 8.0;
 
         if (normalized < 0) normalized = 0;
@@ -221,5 +220,88 @@ public class EntropyCalculator : ErrorCalculator
             h += -p * Math.Log2(p);
         }
         return h;
+    }
+}
+
+// Katanya seluruh Error Calculation disini, jadi yowes ini juga disini, help code nya panjang T^T
+public class SSIMCalculator : ErrorCalculator
+{
+    public override string Name { get => "SSIM"; }
+
+    public override double CalculateError(Region2Int region)
+    {
+        // SSIM disini berarti self-comparison
+        if (image == null) return 0;
+
+        // Typical SSIM constants for 8-bit images
+        const double L = 255.0;     // max pixel value
+        const double k1 = 0.01;
+        const double k2 = 0.03;
+        double C1 = (k1 * L) * (k1 * L);  // (0.01*255)^2 ~ 6.5025
+        double C2 = (k2 * L) * (k2 * L);  // (0.03*255)^2 ~ 58.5225
+
+        int count = 0;
+        long sumR = 0, sumG = 0, sumB = 0;
+        for (int i = region.start.x; i <= region.end.x; i++)
+        {
+            for (int j = region.start.y; j <= region.end.y; j++)
+            {
+                Color c = image.GetPixel(i, j);
+                sumR += c.R;
+                sumG += c.G;
+                sumB += c.B;
+                count++;
+            }
+        }
+        if (count == 0) return 0;
+
+        double meanR = (double)sumR / count;
+        double meanG = (double)sumG / count;
+        double meanB = (double)sumB / count;
+
+        // Compute variances (for single-image self-comparison, cross-cov ~ var)
+        double varR = 0, varG = 0, varB = 0;
+        for (int i = region.start.x; i <= region.end.x; i++)
+        {
+            for (int j = region.start.y; j <= region.end.y; j++)
+            {
+                Color c = image.GetPixel(i, j);
+                varR += Math.Pow(c.R - meanR, 2);
+                varG += Math.Pow(c.G - meanG, 2);
+                varB += Math.Pow(c.B - meanB, 2);
+            }
+        }
+        varR /= count;
+        varG /= count;
+        varB /= count;
+
+        // for this (self  comparison) cross-cov = var.
+        double covR = varR, covG = varG, covB = varB;
+
+        double ssimR = ComputeSSIM(meanR, meanR, varR, varR, covR, C1, C2);
+        double ssimG = ComputeSSIM(meanG, meanG, varG, varG, covG, C1, C2);
+        double ssimB = ComputeSSIM(meanB, meanB, varB, varB, covB, C1, C2);
+
+        double ssimRGB = (ssimR + ssimG + ssimB) / 3.0;
+
+        if (ssimRGB < 0) ssimRGB = 0;
+        if (ssimRGB > 1) ssimRGB = 1;
+
+        return ssimRGB;
+    }
+
+    private double ComputeSSIM(
+        double muX, double muY,
+        double varX, double varY,
+        double covXY,
+        double C1, double C2
+    )
+    {
+        double numerator   = (2.0 * muX * muY + C1) * (2.0 * covXY + C2);
+        double denominator = (muX * muX + muY * muY + C1) * (varX + varY + C2);
+
+        if (denominator == 0.0) return 1.0; // mudah-mudahan gak perlu, but just in case
+
+        return numerator / denominator;
     }
 }
