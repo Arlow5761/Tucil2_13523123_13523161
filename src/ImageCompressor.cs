@@ -123,7 +123,7 @@ class ImageCompressor
         new VarianceCalculator(),
         new MeanAbsoluteDeviationCalculator(),
         new EntropyCalculator(),
-        //new SSIMCalculator()
+        new SSIMCalculator()
     };
 
     public string imagePath;
