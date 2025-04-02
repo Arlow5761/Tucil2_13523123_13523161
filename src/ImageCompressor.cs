@@ -2,9 +2,8 @@
 
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Numerics;
+using Tree;
 using ErrorCalculation;
-using LinkedNodes;
 using Util;
 
 class ImageCompressor
@@ -133,7 +132,7 @@ class ImageCompressor
     private byte[]? rawData = null;
     private long originalSize = 0;
     private Bitmap? rawImage = null;
-    private InvertedTree<ImageRegion>? tree = null;
+    private QuadTree? tree = null;
 
     public ImageCompressor()
     {
@@ -186,37 +185,9 @@ class ImageCompressor
 
     private void CompressByPercentage()
     {
-        tree = new(new(new(new(new(0, 0), new(rawImage!.Size.Width - 1, rawImage!.Size.Height - 1)))));
+        tree = new QuadTree(rawImage!, minBlockSize, errorCalculator);
 
-        int i = 0;
-
-        while (i < tree.leafNodes.Count)
-        {
-            Region2Int currentRegion = tree.leafNodes[i].content.region;
-
-            if (currentRegion.area >= 4 * minBlockSize && currentRegion.size.x > 1 && currentRegion.size.y > 1)
-            {
-                tree.AddLeaves([
-                    new(new(new(currentRegion.start, currentRegion.start + currentRegion.size / 2 - new Vector2Int(1, 1)))),
-                    new(new(new(currentRegion.start + new Vector2Int(currentRegion.size.x / 2, 0), currentRegion.start + new Vector2Int(currentRegion.size.x - 1, currentRegion.size.y / 2 - 1)))),
-                    new(new(new(currentRegion.start + new Vector2Int(0, currentRegion.size.y / 2), currentRegion.start + new Vector2Int(currentRegion.size.x / 2 - 1, currentRegion.size.y - 1)))),
-                    new(new(new(currentRegion.start + currentRegion.size / 2, currentRegion.end)))
-                ], tree.leafNodes[i]);
-                
-                continue;
-            }
-
-            i++;
-        }
-
-        for (i = 0; i < tree.leafNodes.Count; i++)
-        {
-            tree.leafNodes[i].content.error = errorCalculator.CalculateError(tree.leafNodes[i].content.region);
-        }
-
-        SortLeafNodesByError(tree.leafNodes, 0, tree.leafNodes.Count - 1);
-
-        int pixelsInImage = rawImage.Width * rawImage.Height;
+        int pixelsInImage = rawImage!.Width * rawImage!.Height;
         int uncompressedPixels = pixelsInImage;
         int targetSize = (int) (originalSize * compressionPercentage);
 
@@ -227,11 +198,13 @@ class ImageCompressor
         {
             int targetUncompressedPixels = uncompressedPixels - (int) ((imageStream.Length - targetSize) * uncompressedPixels / imageStream.Length);
 
+            //Console.WriteLine(uncompressedPixels.ToString() + " > " + targetUncompressedPixels.ToString() + " | " + tree.leavesCount.ToString());
+
             do
             {
-                if (tree.leafNodes.Count <= 1) break;
+                if (tree.leavesCount <= 1) break;
 
-                Region2Int region = tree.leafNodes[0].content.region;
+                Region2Int region = tree.Pop().region;
                 
                 if (region.area < 4 * minBlockSize || region.size.x <= 1 || region.size.y <= 1)
                 {
@@ -243,83 +216,14 @@ class ImageCompressor
                 }
 
                 NormalizeRegion(region);
-                tree.RemoveLeaf(tree.leafNodes[0]);
-
-                Node<ImageRegion> lastLeaf = tree.leafNodes[tree.leafNodes.Count - 1];
-                if (lastLeaf.content.error == 0)
-                {
-                    lastLeaf.content.error = errorCalculator.CalculateError(lastLeaf.content.region);
-                    tree.leafNodes.RemoveAt(tree.leafNodes.Count - 1);
-                    InsertLeafNode(lastLeaf, tree.leafNodes);
-                }
             }
             while (uncompressedPixels > targetUncompressedPixels);
 
-            if (tree.leafNodes.Count <= 1) break;
+            if (tree.leavesCount <= 1) break;
 
             imageStream.SetLength(0);
             rawImage.Save(imageStream, ImageFormat.Png);
         }
-    }
-
-    private void SortLeafNodesByError(List<Node<ImageRegion>> leaves, int start, int end)
-    {
-        if (start >= end) return;
-
-        int i = start;
-        int j = end;
-
-        double pivotError = leaves[i].content.error;
-
-        while (i <= j)
-        {
-            while (i <= j && leaves[i].content.error < pivotError)
-            {
-                i++;
-            }
-
-            while (i <= j && leaves[j].content.error > pivotError)
-            {
-                j--;
-            }
-
-            if (i > j) break;
-
-            (leaves[i], leaves[j]) = (leaves[j], leaves[i]);
-            i++;
-            j--;
-        }
-        
-        SortLeafNodesByError(leaves, start, j);
-        SortLeafNodesByError(leaves, i, end);
-    }
-
-    private void InsertLeafNode(Node<ImageRegion> newLeaf, List<Node<ImageRegion>> leaves)
-    {
-        int i = 0;
-        int j = leaves.Count;
-        int pivot = (i + j) / 2;
-
-        while (i + 1 < j)
-        {
-            pivot = (i + j) / 2;
-
-            if (newLeaf.content.error == leaves[pivot].content.error)
-            {
-                leaves.Insert(pivot, newLeaf);
-                return;
-            }
-            else if (newLeaf.content.error > leaves[pivot].content.error)
-            {
-                i = pivot;
-            }
-            else if (newLeaf.content.error < leaves[pivot].content.error)
-            {
-                j = pivot;
-            }
-        }
-
-        leaves.Insert(pivot, newLeaf);
     }
 
     private void NormalizeRegion(Region2Int region)

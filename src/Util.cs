@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace ImageCompressor.Util;
 
 public struct Vector2Int
@@ -27,6 +29,12 @@ public struct Region2Int
     {
         this.start = start;
         this.end = end;
+    }
+
+    public Region2Int(int startX, int startY, int endX, int endY)
+    {
+        this.start = new Vector2Int(startX, startY);
+        this.end = new Vector2Int(endX, endY);
     }
 
     public Vector2Int size { get => end - start + new Vector2Int(1, 1); }
