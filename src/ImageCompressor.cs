@@ -118,6 +118,8 @@ class ImageCompressor
         }
         while (compressor.outPath == "");
 
+        Console.WriteLine("\nCompressing. Please Wait...\n");
+
         compressor.Run();
     }
 
@@ -138,8 +140,8 @@ class ImageCompressor
 
     private byte[]? rawData = null;
     private long originalSize = 0;
-    private Image<Rgb24>? sourceImage = null;
-    private Image<Rgb24>? outImage = null;
+    private Image<Rgba32>? sourceImage = null;
+    private Image<Rgba32>? outImage = null;
     private IImageEncoder? encoder = null;
     private QuadTree? tree = null;
 
@@ -158,8 +160,8 @@ class ImageCompressor
         rawData = File.ReadAllBytes(imagePath);
         originalSize = rawData.LongLength;
 
-        sourceImage = (Image<Rgb24>) Image.Load(imagePath);
-        outImage = (Image<Rgb24>) Image.Load(imagePath);
+        sourceImage = Image.Load<Rgba32>(imagePath);
+        outImage = Image.Load<Rgba32>(imagePath);
 
         encoder = outImage.Configuration.ImageFormatsManager.GetEncoder(outImage.Metadata.DecodedImageFormat!);
 
@@ -252,7 +254,7 @@ class ImageCompressor
         {
             for (int j = region.start.y; j <= region.end.y; j++)
             {
-                Rgb24 pixel = sourceImage![i, j];
+                Rgba32 pixel = sourceImage![i, j];
                 r += pixel.R;
                 g += pixel.G;
                 b += pixel.B;
@@ -269,7 +271,7 @@ class ImageCompressor
         {
             for (int j = region.start.y; j <= region.end.y; j++)
             {
-                outImage![i, j] = new Rgb24((byte) r, (byte) g, (byte) b);
+                outImage![i, j] = new Rgba32((byte) r, (byte) g, (byte) b);
             }
         }
     }

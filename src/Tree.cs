@@ -9,7 +9,7 @@ public class QuadTree
 {
     public int leavesCount { get => leafNodes.Count; }
 
-    public QuadTree(Image<Rgb24> source, int minBlockSize, ErrorCalculator errorCalculator)
+    public QuadTree(Image<Rgba32> source, int minBlockSize, ErrorCalculator errorCalculator)
     {
         this.sourceImage = source;
         this.errorCalculator = errorCalculator;
@@ -126,7 +126,7 @@ public class QuadTree
         return poppedNode.content;
     }
 
-    private Image<Rgb24> sourceImage;
+    private Image<Rgba32> sourceImage;
     private ErrorCalculator errorCalculator;
     private Node rootNode;
     private List<Node> leafNodes;
