@@ -4,9 +4,7 @@ using SixLabors.ImageSharp;
 using Tree;
 using ErrorCalculation;
 using Util;
-using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Advanced;
 using SixLabors.ImageSharp.Formats;
 
 class ImageCompressor
@@ -118,6 +116,13 @@ class ImageCompressor
         }
         while (compressor.outPath == "");
 
+        do
+        {
+            Console.WriteLine("Enter an absolute output path for GIF:");
+            compressor.gifPath = Console.ReadLine() ?? "";
+        }
+        while (compressor.gifPath == "");
+
         Console.WriteLine("\nCompressing. Please Wait...\n");
 
         compressor.Run();
@@ -131,19 +136,24 @@ class ImageCompressor
         new SSIMCalculator()
     };
 
+    static int framerate = 10;
+
     public string imagePath;
     public ErrorCalculator errorCalculator;
     public double threshold;
     public int minBlockSize;
     public double compressionPercentage;
     public string outPath;
+    public string gifPath;
 
     private byte[]? rawData = null;
     private long originalSize = 0;
     private Image<Rgba32>? sourceImage = null;
-    private Image<Rgba32>? outImage = null;
+    public Image<Rgba32>? outImage = null;
+    public Image<Rgba32>? gif = null;
     private IImageEncoder? encoder = null;
     private QuadTree? tree = null;
+    private int gifThrottle = 0;
 
     public ImageCompressor()
     {
@@ -153,6 +163,7 @@ class ImageCompressor
         minBlockSize = 0;
         compressionPercentage = 0;
         outPath = "";
+        gifPath = "";
     }
 
     public void Run()
@@ -162,10 +173,17 @@ class ImageCompressor
 
         sourceImage = Image.Load<Rgba32>(imagePath);
         outImage = Image.Load<Rgba32>(imagePath);
+        gif = Image.Load<Rgba32>(imagePath);
+
+        outImage.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = framerate;
+        gif.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = framerate;
+        gif.Metadata.GetGifMetadata().RepeatCount = 0;
 
         encoder = outImage.Configuration.ImageFormatsManager.GetEncoder(outImage.Metadata.DecodedImageFormat!);
 
         errorCalculator.LoadImage(sourceImage);
+
+        gifThrottle = sourceImage!.Width * sourceImage!.Height / 32;
         
         if (compressionPercentage <= 0.0d)
         {
@@ -176,7 +194,10 @@ class ImageCompressor
             CompressByPercentage();
         }
 
+        gif.Frames.AddFrame(outImage.Frames.RootFrame);
+
         outImage.Save(outPath, encoder);
+        gif.SaveAsGif(gifPath);
     }
 
     private void CompressByThreshold(Region2Int region)
@@ -243,6 +264,8 @@ class ImageCompressor
 
     private void NormalizeRegion(Region2Int region)
     {
+        if (region.area <= 1) return;
+
         int regionWidth = region.end.x - region.start.x + 1;
         int regionHeight = region.end.y - region.start.y + 1;
 
@@ -273,6 +296,14 @@ class ImageCompressor
             {
                 outImage![i, j] = new Rgba32((byte) r, (byte) g, (byte) b);
             }
+        }
+
+        gifThrottle -= region.area;
+
+        if (gifThrottle <= 0)
+        {
+            gif!.Frames.AddFrame(outImage!.Frames.RootFrame);
+            gifThrottle = sourceImage!.Width * sourceImage!.Height / 32;
         }
     }
 }
