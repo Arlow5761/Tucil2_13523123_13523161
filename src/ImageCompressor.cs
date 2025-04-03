@@ -6,6 +6,7 @@ using ErrorCalculation;
 using Util;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Formats;
+using System.Diagnostics;
 
 class ImageCompressor
 {
@@ -95,12 +96,12 @@ class ImageCompressor
 
             string rawInput = Console.ReadLine() ?? "";
 
-            if (!double.TryParse(rawInput, out compressor.compressionPercentage))
+            if (!double.TryParse(rawInput, out compressor.compressionTarget))
             {
                 continue;
             }
 
-            if (compressor.compressionPercentage < 0d || compressor.compressionPercentage > 1d)
+            if (compressor.compressionTarget < 0d || compressor.compressionTarget > 1d)
             {
                 continue;
             }
@@ -126,6 +127,13 @@ class ImageCompressor
         Console.WriteLine("\nCompressing. Please Wait...\n");
 
         compressor.Run();
+
+        Console.WriteLine("Compression completed in " + compressor.executionTime.ToString() + " milliseconds");
+        Console.WriteLine("Original size: " + compressor.originalSize.ToString() +" bytes");
+        Console.WriteLine("Compressed size: " + compressor.newSize.ToString() + " bytes");
+        Console.WriteLine("Compression percentage: " + compressor.compressionPercentage.ToString() + "%");
+        Console.WriteLine("Quadtree max depth: " + compressor.treeDepth.ToString());
+        Console.WriteLine("Quadtree nodes: " + compressor.treeNodes.ToString());
     }
 
     static ErrorCalculator[] availableErrorCalculators = {
@@ -142,12 +150,18 @@ class ImageCompressor
     public ErrorCalculator errorCalculator;
     public double threshold;
     public int minBlockSize;
-    public double compressionPercentage;
+    public double compressionTarget;
     public string outPath;
     public string gifPath;
 
+    public double executionTime = 0;
+    public long originalSize = 0;
+    public long newSize = 0;
+    public double compressionPercentage = 0;
+    public int treeDepth = 0;
+    public int treeNodes = 0;
+
     private byte[]? rawData = null;
-    private long originalSize = 0;
     private Image<Rgba32>? sourceImage = null;
     public Image<Rgba32>? outImage = null;
     public Image<Rgba32>? gif = null;
@@ -161,13 +175,16 @@ class ImageCompressor
         errorCalculator = availableErrorCalculators[0];
         threshold = 0;
         minBlockSize = 0;
-        compressionPercentage = 0;
+        compressionTarget = 0;
         outPath = "";
         gifPath = "";
     }
 
     public void Run()
     {
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+
         rawData = File.ReadAllBytes(imagePath);
         originalSize = rawData.LongLength;
 
@@ -185,12 +202,13 @@ class ImageCompressor
 
         gifThrottle = sourceImage!.Width * sourceImage!.Height / 32;
         
-        if (compressionPercentage <= 0.0d)
+        if (compressionTarget <= 0.0d)
         {
-            CompressByThreshold(new(new(0, 0), new(sourceImage.Size.Width - 1, sourceImage.Size.Height - 1)));
+            CompressByThreshold(new(new(0, 0), new(sourceImage.Size.Width - 1, sourceImage.Size.Height - 1)), 1);
         }
         else
         {
+            compressionTarget = 1 - compressionTarget;
             CompressByPercentage();
         }
 
@@ -198,10 +216,21 @@ class ImageCompressor
 
         outImage.Save(outPath, encoder);
         gif.SaveAsGif(gifPath);
+
+        stopwatch.Stop();
+
+        executionTime = stopwatch.Elapsed.TotalMilliseconds;
+
+        rawData = File.ReadAllBytes(outPath);
+        newSize = rawData.LongLength;
+
+        compressionPercentage = (1d - (double) newSize / originalSize) * 100d;
     }
 
-    private void CompressByThreshold(Region2Int region)
+    private void CompressByThreshold(Region2Int region, int depth)
     {
+        treeNodes += 1;
+
         if (region.area <= 1) return;
 
         double error = errorCalculator.CalculateError(region);
@@ -209,13 +238,18 @@ class ImageCompressor
         if (error < threshold)
         {
             NormalizeRegion(region);
+            treeDepth = Math.Max(depth, treeDepth);
         }
         else if (region.area >= 4 * minBlockSize && region.size.x > 1 && region.size.y > 1)
         {
-            CompressByThreshold(new(region.start, region.start + region.size / 2 - new Vector2Int(1, 1)));
-            CompressByThreshold(new(region.start + new Vector2Int(region.size.x / 2, 0), region.start + new Vector2Int(region.size.x - 1, region.size.y / 2 - 1)));
-            CompressByThreshold(new(region.start + new Vector2Int(0, region.size.y / 2), region.start + new Vector2Int(region.size.x / 2 - 1, region.size.y - 1)));
-            CompressByThreshold(new(region.start + region.size / 2, region.end));
+            CompressByThreshold(new(region.start, region.start + region.size / 2 - new Vector2Int(1, 1)), depth + 1);
+            CompressByThreshold(new(region.start + new Vector2Int(region.size.x / 2, 0), region.start + new Vector2Int(region.size.x - 1, region.size.y / 2 - 1)), depth + 1);
+            CompressByThreshold(new(region.start + new Vector2Int(0, region.size.y / 2), region.start + new Vector2Int(region.size.x / 2 - 1, region.size.y - 1)), depth + 1);
+            CompressByThreshold(new(region.start + region.size / 2, region.end), depth + 1);
+        }
+        else
+        {
+            treeDepth = Math.Max(depth, treeDepth);
         }
     }
 
@@ -223,9 +257,12 @@ class ImageCompressor
     {
         tree = new QuadTree(sourceImage!, minBlockSize, errorCalculator);
 
+        treeNodes = tree.treeNodes;
+        treeDepth = tree.treeDepth;
+
         int pixelsInImage = sourceImage!.Width * sourceImage!.Height;
         int uncompressedPixels = pixelsInImage;
-        int targetSize = (int) (originalSize * compressionPercentage);
+        int targetSize = (int) (originalSize * compressionTarget);
 
         MemoryStream imageStream = new((int) originalSize);
         outImage!.Save(imageStream, encoder!);

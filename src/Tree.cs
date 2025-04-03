@@ -7,6 +7,8 @@ using Util;
 
 public class QuadTree
 {
+    public int treeNodes { get => _treeNodes; }
+    public int treeDepth { get => _treeDepth; }
     public int leavesCount { get => leafNodes.Count; }
 
     public QuadTree(Image<Rgba32> source, int minBlockSize, ErrorCalculator errorCalculator)
@@ -19,6 +21,8 @@ public class QuadTree
         LinkedListNode<Node>? currentNode = tempLeaves.First;
         while (currentNode is not null)
         {
+            _treeNodes++;
+
             Node node = currentNode.ValueRef;
             Region2Int currentRegion = node.content.region;
 
@@ -61,6 +65,11 @@ public class QuadTree
             }
 
             currentNode = currentNode.Next;
+        }
+
+        for (Node? current = tempLeaves.Last?.Value; current is not null; current = current.parent)
+        {
+            _treeDepth++;
         }
 
         this.leafNodes = tempLeaves.ToList();
@@ -130,6 +139,8 @@ public class QuadTree
     private ErrorCalculator errorCalculator;
     private Node rootNode;
     private List<Node> leafNodes;
+    private int _treeNodes = 0;
+    private int _treeDepth = 0;
 
     private void SortLeaves()
     {
