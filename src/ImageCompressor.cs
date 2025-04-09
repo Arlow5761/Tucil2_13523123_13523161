@@ -7,6 +7,8 @@ using Util;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Formats;
 using System.Diagnostics;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Drawing.Processing;
 
 class ImageCompressor
 {
@@ -25,8 +27,6 @@ class ImageCompressor
 
         do
         {
-            bool validSelection = false;
-
             Console.WriteLine("Choose an error calculation method.");
             Console.WriteLine("Possible values are:");
             
@@ -36,11 +36,13 @@ class ImageCompressor
             }
 
             string selection = Console.ReadLine() ?? "";
+            bool validSelection = false;
 
             for (int i = 0; i < availableErrorCalculators.Length; i++)
             {
                 if (selection == availableErrorCalculators[i].Name)
                 {
+                    compressor.errorCalculator = availableErrorCalculators[i];
                     validSelection = true;
                     break;
                 }
@@ -168,6 +170,7 @@ class ImageCompressor
     private IImageEncoder? encoder = null;
     private QuadTree? tree = null;
     private int gifThrottle = 0;
+    private QuadCache<ColorCache>? colorCache;
 
     public ImageCompressor()
     {
@@ -199,6 +202,8 @@ class ImageCompressor
         encoder = outImage.Configuration.ImageFormatsManager.GetEncoder(outImage.Metadata.DecodedImageFormat!);
 
         errorCalculator.LoadImage(sourceImage);
+
+        colorCache = new QuadCache<ColorCache>(sourceImage.Width, sourceImage.Height);
 
         gifThrottle = sourceImage!.Width * sourceImage!.Height / 32;
         
@@ -305,33 +310,48 @@ class ImageCompressor
 
         int regionWidth = region.end.x - region.start.x + 1;
         int regionHeight = region.end.y - region.start.y + 1;
+        int regionSize = regionWidth * regionHeight;
 
         int r = 0;
         int g = 0;
         int b = 0;
 
-        for (int i = region.start.x; i <= region.end.x; i++)
+        /*if (colorCache!.TryGetCache(region, out ColorCache[] cache))
+        {
+            for (int i = 0; i < cache.Length; i++)
+            {
+                r += cache[i].averageColor.R * cache[i].pixelCount;
+                g += cache[i].averageColor.G * cache[i].pixelCount;
+                b += cache[i].averageColor.B * cache[i].pixelCount;
+            }
+        }
+        else*/
         {
             for (int j = region.start.y; j <= region.end.y; j++)
             {
-                Rgba32 pixel = sourceImage![i, j];
-                r += pixel.R;
-                g += pixel.G;
-                b += pixel.B;
+                for (int i = region.start.x; i <= region.end.x; i++)
+                {
+                    Rgba32 pixel = sourceImage![i, j];
+                    r += pixel.R;
+                    g += pixel.G;
+                    b += pixel.B;
+                }
             }
         }
-
-        int regionSize = regionWidth * regionHeight;
 
         r /= regionSize;
         g /= regionSize;
         b /= regionSize;
 
-        for (int i = region.start.x; i <= region.end.x; i++)
+        //colorCache.SetCache(region, new ColorCache() { averageColor = new Rgba32((byte) r, (byte) g, (byte) b), pixelCount = regionSize });
+
+        Rgba32 color = new Rgba32((byte) r, (byte) g, (byte) b);
+
+        for (int j = region.start.y; j <= region.end.y; j++)
         {
-            for (int j = region.start.y; j <= region.end.y; j++)
+            for (int i = region.start.x; i <= region.end.x; i++)
             {
-                outImage![i, j] = new Rgba32((byte) r, (byte) g, (byte) b);
+                outImage![i, j] = color;
             }
         }
 
@@ -342,5 +362,11 @@ class ImageCompressor
             gif!.Frames.AddFrame(outImage!.Frames.RootFrame);
             gifThrottle = sourceImage!.Width * sourceImage!.Height / 32;
         }
+    }
+
+    private struct ColorCache
+    {
+        public Rgba32 averageColor;
+        public int pixelCount;
     }
 }
