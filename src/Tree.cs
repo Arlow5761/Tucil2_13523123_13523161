@@ -17,13 +17,14 @@ public class QuadTree
         this.errorCalculator = errorCalculator;
         this.rootNode = new Node() { content = new ImageRegion(new Region2Int(0, 0, source.Width - 1, source.Height - 1)) };
         
-        LinkedList<Node> tempLeaves = new LinkedList<Node>([rootNode]);
-        LinkedListNode<Node>? currentNode = tempLeaves.First;
-        while (currentNode is not null)
+        this.leafNodes = new List<Node>(source.Width * source.Height / minBlockSize) {rootNode};
+
+        int current = 0;
+        while (current < leafNodes.Count)
         {
             _treeNodes++;
 
-            Node node = currentNode.ValueRef;
+            Node node = leafNodes[current];
             Region2Int currentRegion = node.content.region;
 
             if (currentRegion.area >= 4 * minBlockSize && currentRegion.size.x > 1 && currentRegion.size.y > 1)
@@ -52,27 +53,21 @@ public class QuadTree
                     content = new ImageRegion(new Region2Int(currentRegion.start + currentRegion.size / 2, currentRegion.end))
                 };
 
-                tempLeaves.AddLast(node.children[0]!);
-                tempLeaves.AddLast(node.children[1]!);
-                tempLeaves.AddLast(node.children[2]!);
-                tempLeaves.AddLast(node.children[3]!);
-
-                currentNode = currentNode.Next;
-
-                tempLeaves.Remove(currentNode!.Previous!);
+                leafNodes[current] = node.children[0]!;
+                leafNodes.Add(node.children[1]!);
+                leafNodes.Add(node.children[2]!);
+                leafNodes.Add(node.children[3]!);
 
                 continue;
             }
 
-            currentNode = currentNode.Next;
+            current++;
         }
 
-        for (Node? current = tempLeaves.Last?.Value; current is not null; current = current.parent)
+        for (Node? node = leafNodes[leafNodes.Count - 1]; node is not null; node = node.parent)
         {
             _treeDepth++;
         }
-
-        this.leafNodes = tempLeaves.ToList();
 
         for (int i = 0; i < leafNodes.Count; i++)
         {
@@ -105,6 +100,8 @@ public class QuadTree
                 break;
             }
         }
+
+        poppedNode.compressed = true;
         
         if (poppedNode.parent is null)
         {
@@ -116,11 +113,7 @@ public class QuadTree
 
         for (int i = 0; i < 4; i++)
         {
-            if (parentNode.children[i] == poppedNode)
-            {
-                parentNode.children[i] = null;
-            }
-            else if (parentNode.children[i] is not null)
+            if (!parentNode.children[i]!.compressed)
             {
                 childrenless = false;
             }
@@ -165,10 +158,16 @@ public class QuadTree
         }
     }
 
-    private class Node
+    public class Node
     {
         public ImageRegion content;
         public Node? parent = null;
+        public bool compressed = false;
         public Node?[] children = [null, null, null, null];
+
+        public static Node DeadNode = new Node()
+        {
+            content = new ImageRegion(new Region2Int(), double.PositiveInfinity)
+        };
     }
 }

@@ -1,5 +1,6 @@
 namespace ImageCompressor.ErrorCalculation;
 
+using System.Diagnostics.CodeAnalysis;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Util;
@@ -22,33 +23,74 @@ public class MaxPixelDifferenceCalculator : ErrorCalculator
 {
     public override string Name { get => "Max Pixel Difference"; }
 
+    public override void LoadImage(Image<Rgba32> image)
+    {
+        base.LoadImage(image);
+        cache = new QuadCache<Cache>(image.Width, image.Height);
+    }
+
     public override double CalculateError(Region2Int region)
     {
-        uint minR = uint.MaxValue;
-        uint minG = uint.MaxValue;
-        uint minB = uint.MaxValue;
+        Cache newCache = new Cache();
 
-        uint maxR = uint.MinValue;
-        uint maxG = uint.MinValue;
-        uint maxB = uint.MinValue;
+        newCache.minR = byte.MaxValue;
+        newCache.minG = byte.MaxValue;
+        newCache.minB = byte.MaxValue;
 
-        for (int i = region.start.x; i <= region.end.x; i++)
+        newCache.maxR = byte.MinValue;
+        newCache.maxG = byte.MinValue;
+        newCache.maxB = byte.MinValue;
+        
+        /*if (region.area > 1 << 16 && cache!.TryGetCache(region, out Cache[] cacheData))
         {
-            for (int j = region.start.y; j < region.end.y; j++)
+            for (int i = 0; i < cacheData.Length; i++)
             {
-                Rgba32 c = image![i, j];
+                Cache c = cacheData[i];
 
-                if (c.R > maxR) maxR = c.R;
-                if (c.G > maxG) maxG = c.G;
-                if (c.B > maxB) maxB = c.B;
+                if (c.maxR > newCache.maxR) newCache.maxR = c.maxR;
+                if (c.maxG > newCache.maxG) newCache.maxG = c.maxG;
+                if (c.maxB > newCache.maxB) newCache.maxB = c.maxB;
 
-                if (c.R < minR) minR = c.R;
-                if (c.G < minG) minG = c.G;
-                if (c.B < minB) minB = c.B;
+                if (c.minR < newCache.minR) newCache.minR = c.minR;
+                if (c.minG < newCache.minG) newCache.minG = c.minG;
+                if (c.minB < newCache.minB) newCache.minB = c.minB;
+            }
+        }
+        else*/
+        {
+            for (int j = region.start.y; j <= region.end.y; j++)
+            {
+                for (int i = region.start.x; i < region.end.x; i++)
+                {
+                    Rgba32 c = image![i, j];
+
+                    if (c.R > newCache.maxR) newCache.maxR = c.R;
+                    if (c.G > newCache.maxG) newCache.maxG = c.G;
+                    if (c.B > newCache.maxB) newCache.maxB = c.B;
+
+                    if (c.R < newCache.minR) newCache.minR = c.R;
+                    if (c.G < newCache.minG) newCache.minG = c.G;
+                    if (c.B < newCache.minB) newCache.minB = c.B;
+                }
             }
         }
 
-        return (maxR + maxG + maxB - minR - minG - minB) / (256.0d * 3.0d);
+        //if (region.area > 1 << 16) cache!.SetCache(region, newCache);
+
+        return (newCache.maxR + newCache.maxG + newCache.maxB - newCache.minR - newCache.minG - newCache.minB) / (256.0d * 3.0d);
+    }
+
+    private QuadCache<Cache>? cache;
+
+    private struct Cache
+    {
+        public byte maxR;
+        public byte maxG;
+        public byte maxB;
+
+        public byte minR;
+        public byte minB;
+        public byte minG;
     }
 }
 
@@ -64,9 +106,9 @@ public class VarianceCalculator : ErrorCalculator
         long sumR = 0, sumG = 0, sumB = 0;
         int count = 0;
 
-        for (int i = region.start.x; i <= region.end.x; i++)
+        for (int j = region.start.y; j <= region.end.y; j++)
         {
-            for (int j = region.start.y; j <= region.end.y; j++)
+            for (int i = region.start.x; i <= region.end.x; i++)
             {
                 Rgba32 c = image![i, j];
                 sumR += c.R;
@@ -84,9 +126,9 @@ public class VarianceCalculator : ErrorCalculator
         double meanB = (double)sumB / count;
 
         double sqDiffR = 0, sqDiffG = 0, sqDiffB = 0;
-        for (int i = region.start.x; i <= region.end.x; i++)
+        for (int j = region.start.y; j <= region.end.y; j++)
         {
-            for (int j = region.start.y; j <= region.end.y; j++)
+            for (int i = region.start.x; i <= region.end.x; i++)
             {
                 Rgba32 c = image![i, j];
                 sqDiffR += Math.Pow(c.R - meanR, 2);
@@ -123,9 +165,9 @@ public class MeanAbsoluteDeviationCalculator : ErrorCalculator
 
         long sumR = 0, sumG = 0, sumB = 0;
         int count = 0;
-        for (int i = region.start.x; i <= region.end.x; i++)
+        for (int j = region.start.y; j <= region.end.y; j++)
         {
-            for (int j = region.start.y; j <= region.end.y; j++)
+            for (int i = region.start.x; i <= region.end.x; i++)
             {
                 Rgba32 c = image[i, j];
                 sumR += c.R;
@@ -142,9 +184,9 @@ public class MeanAbsoluteDeviationCalculator : ErrorCalculator
         double meanB = (double)sumB / count;
 
         double absDiffR = 0, absDiffG = 0, absDiffB = 0;
-        for (int i = region.start.x; i <= region.end.x; i++)
+        for (int j = region.start.y; j <= region.end.y; j++)
         {
-            for (int j = region.start.y; j <= region.end.y; j++)
+            for (int i = region.start.x; i <= region.end.x; i++)
             {
                 Rgba32 c = image[i, j];
                 absDiffR += Math.Abs(c.R - meanR);
@@ -181,9 +223,9 @@ public class EntropyCalculator : ErrorCalculator
         int[] freqB = new int[256];
 
         int count = 0;
-        for (int i = region.start.x; i <= region.end.x; i++)
+        for (int j = region.start.y; j <= region.end.y; j++)
         {
-            for (int j = region.start.y; j <= region.end.y; j++)
+            for (int i = region.start.x; i <= region.end.x; i++)
             {
                 Rgba32 c = image[i, j];
                 freqR[c.R]++;
@@ -243,9 +285,9 @@ public class SSIMCalculator : ErrorCalculator
 
         int count = 0;
         long sumR = 0, sumG = 0, sumB = 0;
-        for (int i = region.start.x; i <= region.end.x; i++)
+        for (int j = region.start.y; j <= region.end.y; j++)
         {
-            for (int j = region.start.y; j <= region.end.y; j++)
+            for (int i = region.start.x; i <= region.end.x; i++)
             {
                 Rgba32 c = image[i, j];
                 sumR += c.R;
@@ -262,9 +304,9 @@ public class SSIMCalculator : ErrorCalculator
 
         // Compute variances (for single-image self-comparison, cross-cov ~ var)
         double varR = 0, varG = 0, varB = 0;
-        for (int i = region.start.x; i <= region.end.x; i++)
+        for (int j = region.start.y; j <= region.end.y; j++)
         {
-            for (int j = region.start.y; j <= region.end.y; j++)
+            for (int i = region.start.x; i <= region.end.x; i++)
             {
                 Rgba32 c = image[i, j];
                 varR += Math.Pow(c.R - meanR, 2);
