@@ -10,14 +10,15 @@ public class QuadTree
     public int treeNodes { get => _treeNodes; }
     public int treeDepth { get => _treeDepth; }
     public int leavesCount { get => leafNodes.Count; }
+    public Node rootNode { get => _rootNode; }
 
     public QuadTree(Image<Rgba32> source, int minBlockSize, ErrorCalculator errorCalculator)
     {
         this.sourceImage = source;
         this.errorCalculator = errorCalculator;
-        this.rootNode = new Node() { content = new ImageRegion(new Region2Int(0, 0, source.Width - 1, source.Height - 1)) };
+        this._rootNode = new Node() { content = new ImageRegion(new Region2Int(0, 0, source.Width - 1, source.Height - 1)) };
         
-        this.leafNodes = new List<Node>(source.Width * source.Height / minBlockSize) {rootNode};
+        this.leafNodes = new List<Node>(source.Width * source.Height / minBlockSize) {_rootNode};
 
         int current = 0;
         while (current < leafNodes.Count)
@@ -130,7 +131,7 @@ public class QuadTree
 
     private Image<Rgba32> sourceImage;
     private ErrorCalculator errorCalculator;
-    private Node rootNode;
+    private Node _rootNode;
     private List<Node> leafNodes;
     private int _treeNodes = 0;
     private int _treeDepth = 0;

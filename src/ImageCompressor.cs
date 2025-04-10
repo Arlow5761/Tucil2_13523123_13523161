@@ -169,7 +169,6 @@ class ImageCompressor
     public Image<Rgba32>? gif = null;
     private IImageEncoder? encoder = null;
     private QuadTree? tree = null;
-    private int gifThrottle = 0;
     private QuadCache<ColorCache>? colorCache;
 
     public ImageCompressor()
@@ -193,23 +192,18 @@ class ImageCompressor
 
         sourceImage = Image.Load<Rgba32>(imagePath);
         outImage = Image.Load<Rgba32>(imagePath);
-        gif = Image.Load<Rgba32>(imagePath);
-
-        outImage.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = framerate;
-        gif.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = framerate;
-        gif.Metadata.GetGifMetadata().RepeatCount = 0;
 
         encoder = outImage.Configuration.ImageFormatsManager.GetEncoder(outImage.Metadata.DecodedImageFormat!);
 
         errorCalculator.LoadImage(sourceImage);
 
-        colorCache = new QuadCache<ColorCache>(sourceImage.Width, sourceImage.Height);
+        tree = new QuadTree(sourceImage!, minBlockSize, errorCalculator);
 
-        gifThrottle = sourceImage!.Width * sourceImage!.Height / 32;
+        colorCache = new QuadCache<ColorCache>(sourceImage.Width, sourceImage.Height);
         
         if (compressionTarget <= 0.0d)
         {
-            CompressByThreshold(new(new(0, 0), new(sourceImage.Size.Width - 1, sourceImage.Size.Height - 1)), 1);
+            CompressByThreshold();
         }
         else
         {
@@ -217,7 +211,7 @@ class ImageCompressor
             CompressByPercentage();
         }
 
-        gif.Frames.AddFrame(outImage.Frames.RootFrame);
+        GenerateGif();
 
         outImage.Save(outPath, encoder);
         gif.SaveAsGif(gifPath);
@@ -232,8 +226,17 @@ class ImageCompressor
         compressionPercentage = (1d - (double) newSize / originalSize) * 100d;
     }
 
-    private void CompressByThreshold(Region2Int region, int depth)
+    private void CompressByThreshold()
     {
+        RecursiveCompress(tree!.rootNode, 1);
+    }
+
+    private void RecursiveCompress(QuadTree.Node? node, int depth)
+    {
+        if (node == null) return;
+
+        Region2Int region = node.content.region;
+
         treeNodes += 1;
 
         if (region.area <= 1) return;
@@ -242,15 +245,16 @@ class ImageCompressor
         
         if (error < threshold)
         {
-            NormalizeRegion(region);
+            NormalizeRegion(region, sourceImage!.Frames.RootFrame, outImage!.Frames.RootFrame);
             treeDepth = Math.Max(depth, treeDepth);
+            node.compressed = true;
         }
         else if (region.area >= 4 * minBlockSize && region.size.x > 1 && region.size.y > 1)
         {
-            CompressByThreshold(new(region.start, region.start + region.size / 2 - new Vector2Int(1, 1)), depth + 1);
-            CompressByThreshold(new(region.start + new Vector2Int(region.size.x / 2, 0), region.start + new Vector2Int(region.size.x - 1, region.size.y / 2 - 1)), depth + 1);
-            CompressByThreshold(new(region.start + new Vector2Int(0, region.size.y / 2), region.start + new Vector2Int(region.size.x / 2 - 1, region.size.y - 1)), depth + 1);
-            CompressByThreshold(new(region.start + region.size / 2, region.end), depth + 1);
+            RecursiveCompress(node.children[0], depth + 1);
+            RecursiveCompress(node.children[1], depth + 1);
+            RecursiveCompress(node.children[2], depth + 1);
+            RecursiveCompress(node.children[3], depth + 1);
         }
         else
         {
@@ -260,9 +264,7 @@ class ImageCompressor
 
     private void CompressByPercentage()
     {
-        tree = new QuadTree(sourceImage!, minBlockSize, errorCalculator);
-
-        treeNodes = tree.treeNodes;
+        treeNodes = tree!.treeNodes;
         treeDepth = tree.treeDepth;
 
         int pixelsInImage = sourceImage!.Width * sourceImage!.Height;
@@ -293,7 +295,7 @@ class ImageCompressor
                     uncompressedPixels -= 3;
                 }
 
-                NormalizeRegion(region);
+                NormalizeRegion(region, sourceImage!.Frames.RootFrame, outImage!.Frames.RootFrame);
             }
             while (uncompressedPixels > targetUncompressedPixels);
 
@@ -304,7 +306,48 @@ class ImageCompressor
         }
     }
 
-    private void NormalizeRegion(Region2Int region)
+    private void GenerateGif()
+    {
+        gif = sourceImage!.Clone();
+        gif.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = framerate;
+        gif.Metadata.GetGifMetadata().RepeatCount = 0;
+
+        List<QuadTree.Node> currentNodes = new List<QuadTree.Node>([tree!.rootNode]);
+        List<QuadTree.Node> nextNodes = new List<QuadTree.Node>(currentNodes.Count * 4);
+        int currentDepth = 0;
+
+        while (currentNodes.Count > 0)
+        {
+            ImageFrame<Rgba32> currentFrame = gif.Frames[currentDepth];
+
+            for (int i = 0; i < currentNodes.Count; i++)
+            {
+                QuadTree.Node currentNode = currentNodes[i];
+
+                NormalizeRegion(currentNode.content.region, sourceImage.Frames.RootFrame, currentFrame);
+
+                if (currentNode.compressed) continue;
+
+                for (int j = 0; j < currentNode.children.Length; j++)
+                {
+                    QuadTree.Node? childNode = currentNode.children[j];
+
+                    if (childNode is null) continue;
+
+                    nextNodes.Add(childNode);
+                }
+            }
+
+            currentNodes = nextNodes;
+            nextNodes = new List<QuadTree.Node>(currentNodes.Count * 4);
+            currentDepth++;
+
+            gif.Frames.AddFrame(gif.Frames[currentDepth - 1]);
+            gif.Frames[currentDepth].Metadata.GetGifMetadata().FrameDelay = framerate;
+        }
+    }
+
+    private void NormalizeRegion(Region2Int region, ImageFrame<Rgba32> sourceImage, ImageFrame<Rgba32> outImage)
     {
         if (region.area <= 1) return;
 
@@ -353,14 +396,6 @@ class ImageCompressor
             {
                 outImage![i, j] = color;
             }
-        }
-
-        gifThrottle -= region.area;
-
-        if (gifThrottle <= 0)
-        {
-            gif!.Frames.AddFrame(outImage!.Frames.RootFrame);
-            gifThrottle = sourceImage!.Width * sourceImage!.Height / 32;
         }
     }
 
