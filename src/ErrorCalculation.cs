@@ -285,16 +285,16 @@ public class SSIMCalculator : ErrorCalculator
         // for this (self  comparison) cross-cov = var.
         double covR = varR, covG = varG, covB = varB;
 
-        double ssimR = ComputeSSIM(meanR, meanR, varR, varR, covR, C1, C2);
-        double ssimG = ComputeSSIM(meanG, meanG, varG, varG, covG, C1, C2);
-        double ssimB = ComputeSSIM(meanB, meanB, varB, varB, covB, C1, C2);
+        double ssimR = ComputeSSIM(meanR, meanR, varR, 0, 0, C1, C2);
+        double ssimG = ComputeSSIM(meanG, meanG, varG, 0, 0, C1, C2);
+        double ssimB = ComputeSSIM(meanB, meanB, varB, 0, 0, C1, C2);
 
-        double ssimRGB = (ssimR + ssimG + ssimB) / 3.0;
+        double ssimRGB = ssimR * 0.299f + ssimG * 0.587f + ssimB * 0.114f;
 
         if (ssimRGB < 0) ssimRGB = 0;
         if (ssimRGB > 1) ssimRGB = 1;
 
-        return ssimRGB;
+        return 1 - ssimRGB;
     }
 
     private double ComputeSSIM(
