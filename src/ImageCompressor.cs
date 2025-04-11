@@ -146,7 +146,7 @@ class ImageCompressor
         new SSIMCalculator()
     };
 
-    static int framerate = 10;
+    static int framerate = 20;
 
     public string imagePath;
     public ErrorCalculator errorCalculator;
