@@ -26,71 +26,35 @@ public class MaxPixelDifferenceCalculator : ErrorCalculator
     public override void LoadImage(Image<Rgba32> image)
     {
         base.LoadImage(image);
-        cache = new QuadCache<Cache>(image.Width, image.Height);
     }
 
     public override double CalculateError(Region2Int region)
     {
-        Cache newCache = new Cache();
+        byte minR = byte.MaxValue;
+        byte minG = byte.MaxValue;
+        byte minB = byte.MaxValue;
 
-        newCache.minR = byte.MaxValue;
-        newCache.minG = byte.MaxValue;
-        newCache.minB = byte.MaxValue;
-
-        newCache.maxR = byte.MinValue;
-        newCache.maxG = byte.MinValue;
-        newCache.maxB = byte.MinValue;
+        byte maxR = byte.MinValue;
+        byte maxG = byte.MinValue;
+        byte maxB = byte.MinValue;
         
-        /*if (region.area > 1 << 16 && cache!.TryGetCache(region, out Cache[] cacheData))
+        for (int j = region.start.y; j <= region.end.y; j++)
         {
-            for (int i = 0; i < cacheData.Length; i++)
+            for (int i = region.start.x; i < region.end.x; i++)
             {
-                Cache c = cacheData[i];
+                Rgba32 c = image![i, j];
 
-                if (c.maxR > newCache.maxR) newCache.maxR = c.maxR;
-                if (c.maxG > newCache.maxG) newCache.maxG = c.maxG;
-                if (c.maxB > newCache.maxB) newCache.maxB = c.maxB;
+                if (c.R > maxR) maxR = c.R;
+                if (c.G > maxG) maxG = c.G;
+                if (c.B > maxB) maxB = c.B;
 
-                if (c.minR < newCache.minR) newCache.minR = c.minR;
-                if (c.minG < newCache.minG) newCache.minG = c.minG;
-                if (c.minB < newCache.minB) newCache.minB = c.minB;
-            }
-        }
-        else*/
-        {
-            for (int j = region.start.y; j <= region.end.y; j++)
-            {
-                for (int i = region.start.x; i < region.end.x; i++)
-                {
-                    Rgba32 c = image![i, j];
-
-                    if (c.R > newCache.maxR) newCache.maxR = c.R;
-                    if (c.G > newCache.maxG) newCache.maxG = c.G;
-                    if (c.B > newCache.maxB) newCache.maxB = c.B;
-
-                    if (c.R < newCache.minR) newCache.minR = c.R;
-                    if (c.G < newCache.minG) newCache.minG = c.G;
-                    if (c.B < newCache.minB) newCache.minB = c.B;
-                }
+                if (c.R < minR) minR = c.R;
+                if (c.G < minG) minG = c.G;
+                if (c.B < minB) minB = c.B;
             }
         }
 
-        //if (region.area > 1 << 16) cache!.SetCache(region, newCache);
-
-        return (newCache.maxR + newCache.maxG + newCache.maxB - newCache.minR - newCache.minG - newCache.minB) / (256.0d * 3.0d);
-    }
-
-    private QuadCache<Cache>? cache;
-
-    private struct Cache
-    {
-        public byte maxR;
-        public byte maxG;
-        public byte maxB;
-
-        public byte minR;
-        public byte minB;
-        public byte minG;
+        return (maxR + maxG + maxB - minR - minG - minB) / (255.0d * 3.0d);
     }
 }
 

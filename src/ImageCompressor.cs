@@ -169,7 +169,6 @@ class ImageCompressor
     public Image<Rgba32>? gif = null;
     private IImageEncoder? encoder = null;
     private QuadTree? tree = null;
-    private QuadCache<ColorCache>? colorCache;
 
     public ImageCompressor()
     {
@@ -198,8 +197,6 @@ class ImageCompressor
         errorCalculator.LoadImage(sourceImage);
 
         tree = new QuadTree(sourceImage!, minBlockSize, errorCalculator);
-
-        colorCache = new QuadCache<ColorCache>(sourceImage.Width, sourceImage.Height);
         
         if (compressionTarget <= 0.0d)
         {
@@ -359,26 +356,14 @@ class ImageCompressor
         int g = 0;
         int b = 0;
 
-        /*if (colorCache!.TryGetCache(region, out ColorCache[] cache))
+        for (int j = region.start.y; j <= region.end.y; j++)
         {
-            for (int i = 0; i < cache.Length; i++)
+            for (int i = region.start.x; i <= region.end.x; i++)
             {
-                r += cache[i].averageColor.R * cache[i].pixelCount;
-                g += cache[i].averageColor.G * cache[i].pixelCount;
-                b += cache[i].averageColor.B * cache[i].pixelCount;
-            }
-        }
-        else*/
-        {
-            for (int j = region.start.y; j <= region.end.y; j++)
-            {
-                for (int i = region.start.x; i <= region.end.x; i++)
-                {
-                    Rgba32 pixel = sourceImage![i, j];
-                    r += pixel.R;
-                    g += pixel.G;
-                    b += pixel.B;
-                }
+                Rgba32 pixel = sourceImage![i, j];
+                r += pixel.R;
+                g += pixel.G;
+                b += pixel.B;
             }
         }
 
