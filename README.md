@@ -10,7 +10,7 @@
 </p>
 
 <h1 align="center">
-  <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&pause=500&color=81a1c1&center=true&vCenter=true&width=600&lines=13523123+and+13523161;Create.+Organize.+Launch." alt="R.Bimo & Arlow" />
+  <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&pause=500&color=81a1c1&center=true&vCenter=true&width=600&lines=13523123+and+13523161;Bimo+and+Arlow" alt="R.Bimo & Arlow" />
 </h1>
 
 ---
@@ -19,34 +19,28 @@
 
 - [✨ Overview](#-overview)
 - [⚙️ Features](#️-features)
-- [📸 Preview](#-preview)
 - [📥 Installation](#-installation)
 - [👤 Author](#-author)
 
 ---
 
 ## ✨ Overview
-**DoIt**: Your terminal, your flow — organized and programmable.
+<p align = center>
+  [gif here]
+</p>
 
-**DoIt** is a simple yet powerful CLI tool to manage terminal-based development workspaces using `tmux`, templates, and boilerplates.
-
-No more tedious terminal command. Just define it once — then **DoIt**.
+**Image Compressor**: Sebuah program yang dapat mengurangi jumlah memori yang dibutuhkan.
 
 ---
 
 ## ⚙️ Features
-
-
-
----
-
-## 📸 Preview
-
+1. Mean Absolute Differece (MAD) Compression
 
 
 ---
 
 ## 📥 Installation
+
 
 ---
 
@@ -65,32 +59,26 @@ No more tedious terminal command. Just define it once — then **DoIt**.
     <tr>
       <td align="center">
         <a href="https://github.com/Cola1000">
-          <img src="https://avatars.githubusercontent.com/u/101655336?v=4" width="100px;" style="border-radius: 50%;" alt="Cola1000"/><br />
+          <img src="https://avatars.githubusercontent.com/u/143616767?v=4" width="100px;" style="border-radius: 50%;" alt="Cola1000"/><br />
           <sub><b>Rhio Bimo Prakoso S</b></sub>
         </a>
       </td>
       <td align="center">
         <a href="https://github.com/Arlow5761">
-          <img src="https://avatars.githubusercontent.com/u/000000000?v=4" width="100px;" style="border-radius: 50%;" alt="Arlow5761"/><br />
+          <img src="https://avatars.githubusercontent.com/u/96019562?v=4" width="100px;" style="border-radius: 50%;" alt="Arlow5761"/><br />
           <sub><b>Arlow Emmanuel Hergara</b></sub>
         </a>
       </td>
     </tr>
   </table>
 </p>
-<div align="center" style="color:#6A994E;"> 🌿 Crafted with care | 2025 🌿</div>
+<div align="center" style="color:#6A994E;"> 🌿 Please Donate for Charity! 🌿</div>
 
 <p align="center">
-  <a href="https://ko-fi.com/kleiov" target="_blank">
-    <img src="https://cdn.ko-fi.com/cdn/kofi3.png?v=3" alt="Ko-fi" style="height: 40px;padding: 20px" />
+  <a href="[https://ko-fi.com/kleiov](https://tiltify.com/@cdawg-va/cdawgva-cyclethon-4)" target="_blank">
+    <img src="https://assets.tiltify.com/uploads/cause/avatar/4569/blob-9169ab7d-a78f-4373-8601-d1999ede3a8d.png" alt="IDF" style="height: 80px;padding: 20px" />
   </a>
 </p>
 
-> [!IMPORTANT]\
-> Something important.
-
-> [!WARNING]\
-> Some warning.
-
 > [!NOTE]\
-> Some notes.
+> README Credits: Kleio-V.
