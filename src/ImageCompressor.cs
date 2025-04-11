@@ -371,8 +371,6 @@ class ImageCompressor
         g /= regionSize;
         b /= regionSize;
 
-        //colorCache.SetCache(region, new ColorCache() { averageColor = new Rgba32((byte) r, (byte) g, (byte) b), pixelCount = regionSize });
-
         Rgba32 color = new Rgba32((byte) r, (byte) g, (byte) b);
 
         for (int j = region.start.y; j <= region.end.y; j++)
@@ -382,11 +380,5 @@ class ImageCompressor
                 outImage![i, j] = color;
             }
         }
-    }
-
-    private struct ColorCache
-    {
-        public Rgba32 averageColor;
-        public int pixelCount;
     }
 }
