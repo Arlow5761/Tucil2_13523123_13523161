@@ -13,44 +13,65 @@
   <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&pause=500&color=81a1c1&center=true&vCenter=true&width=600&lines=13523123+and+13523161;Bimo+and+Arlow" alt="R.Bimo & Arlow" />
 </h1>
 
----
 
 ## 📦 Table of Contents
 
 - [✨ Overview](#-overview)
-- [⚙️ Features](#️-features)
 - [📥 Installation](#-installation)
 - [👤 Author](#-author)
 
----
 
 ## ✨ Overview
 <p align = center>
   [gif here]
 </p>
 
-**Image Compressor**: Sebuah program yang dapat mengurangi jumlah memori yang dibutuhkan.
-
----
-
-## ⚙️ Features
-1. Mean Absolute Differece (MAD) Compression
+**Image Compressor**: Sebuah program yang dapat mengurangi ukuran file gambar tanpa mengurangi kualitas visual secara signifikan.
 
 
----
+## ⚙️ Error Calculation Features
+  1. Max Pixel Difference
+  2. Mean Absolute Differece (MAD)
+  3. Variance
+  4. Entropy
+  5. SSIM
 
-## 📥 Installation
 
+## 🛠️ Installation
 
----
+### Prerequisites
 
-### 🔧 Prerequisites
+- [.NET SDK 8.0 or later](https://dotnet.microsoft.com/en-us/download) installed  
+- A C#-compatible IDE or text editor (e.g., [Visual Studio](https://visualstudio.microsoft.com/), [Rider](https://www.jetbrains.com/rider/), or [VS Code](https://code.visualstudio.com/))
 
-- Unix-like OS (Linux, macOS, WSL)
-- `tmux` installed
-- `jq` required for parsing JSON
+### Steps
 
----
+1. **Clone the Repository**
+
+   ```bash
+   git clone https://github.com/Arlow5761/Tucil2_13523123_13523161.git
+   cd Tucil2_13523123_13523161
+   ```
+
+2. **Restore Dependencies**
+
+   ```bash
+   dotnet restore
+   ```
+
+3. **Build the Project**
+
+   ```bash
+   dotnet build
+   ```
+
+4. **Run the Application**
+
+   ```bash
+   dotnet run --project <path-to-main-csproj-file>
+   ```
+
+> ⚠️ Make sure to replace `<path-to-main-csproj-file>` with the actual path to your `.csproj` file if it's not in the root folder.
 
 ## 👤 Author
 
@@ -75,7 +96,7 @@
 <div align="center" style="color:#6A994E;"> 🌿 Please Donate for Charity! 🌿</div>
 
 <p align="center">
-  <a href="[https://ko-fi.com/kleiov](https://tiltify.com/@cdawg-va/cdawgva-cyclethon-4)" target="_blank">
+  <a href="https://tiltify.com/@cdawg-va/cdawgva-cyclethon-4" target="_blank">
     <img src="https://assets.tiltify.com/uploads/cause/avatar/4569/blob-9169ab7d-a78f-4373-8601-d1999ede3a8d.png" alt="IDF" style="height: 80px;padding: 20px" />
   </a>
 </p>
