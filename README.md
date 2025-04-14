@@ -17,13 +17,14 @@
 ## 📦 Table of Contents
 
 - [✨ Overview](#-overview)
-- [📥 Installation](#-installation)
+- [⚙️ Error Calculation Features](#-error-calculation-features)
+- [🛠️ Installation](#-installation)
 - [👤 Author](#-author)
 
 
 ## ✨ Overview
 <p align = center>
-  [gif here]
+  <img src="test/output/Furina.gif" width="100px;" style="border-radius: 50%;" alt="Cola1000"/>
 </p>
 
 **Image Compressor**: Sebuah program yang dapat mengurangi ukuran file gambar tanpa mengurangi kualitas visual secara signifikan.
